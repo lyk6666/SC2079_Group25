@@ -54,6 +54,7 @@ public class BluetoothSetUp extends Fragment {
     Button connectBtn;
     Button btnSearch;
     ProgressDialog myDialog;
+    // test
 
     private static String[] PERMISSIONS_STORAGE = {
             Manifest.permission.READ_EXTERNAL_STORAGE,
