@@ -2,6 +2,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ===== Bluetooth permissions ===== -->
+
+    <!-- Android 12+ (API 31+) -->
+    <!-- Added neverForLocation to allow scanning without GPS on API 31+ -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Pre-Android 12 (API <= 30) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Needed for discovery on older devices (API <= 30) -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,8 +34,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SC2079_group25">
+
+        <!-- Main (launcher) activity -->
         <activity
-            android:name=".TestActivity"
+            android:name=".ui.BluetoothTerminalActivity"
             android:exported="true">
 
             <intent-filter>
@@ -21,6 +46,7 @@
             </intent-filter>
 
         </activity>
+
     </application>
 
 </manifest>
