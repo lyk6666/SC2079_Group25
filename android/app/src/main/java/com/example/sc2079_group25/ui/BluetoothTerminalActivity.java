@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,6 +30,10 @@ import com.example.sc2079_group25.bluetooth.BluetoothEventListener;
 import com.example.sc2079_group25.bluetooth.BluetoothSerialService;
 import com.example.sc2079_group25.bluetooth.BtConstants;
 import com.example.sc2079_group25.bluetooth.DeviceListAdapter;
+import com.example.sc2079_group25.control.RobotCommands;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.Set;
 
@@ -39,9 +44,10 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
 
     private DeviceListAdapter deviceAdapter;
 
-    private TextView txtConnState, txtTerminal;
-    private EditText edtSend;
+    private TextView txtConnState, txtTerminal, txtRobotStatus;
+    private EditText edtSend, edtGridX, edtGridY;
     private ScrollView scrollTerminal;
+    private ArenaView arenaView;
 
     private boolean pendingStartDiscovery = false;
 
@@ -79,13 +85,24 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
 
         txtConnState = findViewById(R.id.txtConnState);
         txtTerminal = findViewById(R.id.txtTerminal);
+        txtRobotStatus = findViewById(R.id.txtRobotStatus);
         edtSend = findViewById(R.id.edtSend);
+        edtGridX = findViewById(R.id.edtGridX);
+        edtGridY = findViewById(R.id.edtGridY);
         scrollTerminal = findViewById(R.id.scrollTerminal);
+        arenaView = findViewById(R.id.arenaView);
 
         Button btnScan = findViewById(R.id.btnScan);
         Button btnSend = findViewById(R.id.btnSend);
         Button btnDisconnect = findViewById(R.id.btnDisconnect);
         Button btnReconnect = findViewById(R.id.btnReconnect);
+        Button btnSetGrid = findViewById(R.id.btnSetGrid);
+
+        // Robot control buttons
+        ImageButton btnForward = findViewById(R.id.btnForward);
+        ImageButton btnReverse = findViewById(R.id.btnReverse);
+        ImageButton btnLeft = findViewById(R.id.btnLeft);
+        ImageButton btnRight = findViewById(R.id.btnRight);
 
         RecyclerView recycler = findViewById(R.id.recyclerDevices);
         recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -120,13 +137,40 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
             String text = edtSend.getText().toString();
             if (text.trim().isEmpty()) return;
 
-            serial.writeLine(text);
-            appendTerminal("[TX] " + text);
+            sendBluetoothCommand(text);
             edtSend.setText("");
         });
 
+        btnSetGrid.setOnClickListener(v -> {
+            try {
+                int x = Integer.parseInt(edtGridX.getText().toString());
+                int y = Integer.parseInt(edtGridY.getText().toString());
+                if (x > 0 && y > 0) {
+                    arenaView.setGridSize(x, y);
+                    appendTerminal("[UI] Grid size set to " + x + "x" + y);
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Invalid grid size", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Control button listeners
+        btnForward.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.FORWARD));
+        btnReverse.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.REVERSE));
+        btnLeft.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_LEFT));
+        btnRight.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_RIGHT));
+
         ensureBluetoothEnabled();
         preloadPairedDevices();
+    }
+
+    private void sendBluetoothCommand(String cmd) {
+        if (serial.getState() != BtConstants.STATE_CONNECTED) {
+            Toast.makeText(this, "Not connected to a device", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        serial.writeLine(cmd);
+        appendTerminal("[TX] " + cmd);
     }
 
     @Override
@@ -272,6 +316,53 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     @Override
     public void onLineReceived(String line) {
         appendTerminal("[RX] " + line);
+        tryParseRobotData(line);
+    }
+
+    private void tryParseRobotData(String line) {
+        if (line == null) return;
+        
+        try {
+            // Find start of any JSON object in the line
+            int start = line.indexOf("{");
+            if (start == -1) return;
+            int end = line.lastIndexOf("}");
+            if (end == -1 || end < start) return;
+
+            String jsonStr = line.substring(start, end + 1);
+            JSONObject json = new JSONObject(jsonStr);
+
+            // Handle Status
+            if (json.has("status")) {
+                txtRobotStatus.setText(json.getString("status"));
+            }
+
+            // Handle Robot Position: {"robot": {"x": 10, "y": 5, "r": 90}}
+            if (json.has("robot")) {
+                JSONObject robot = json.getJSONObject("robot");
+                float x = (float) robot.getDouble("x");
+                float y = (float) robot.getDouble("y");
+                float r = (float) robot.getDouble("r");
+                arenaView.updateRobot(x, y, r);
+            }
+
+            // Handle Obstacle: {"obstacle": {"id": 1, "x": 8, "y": 8}}
+            if (json.has("obstacle")) {
+                JSONObject obs = json.getJSONObject("obstacle");
+                int id = obs.getInt("id");
+                float ox = (float) obs.getDouble("x");
+                float oy = (float) obs.getDouble("y");
+                arenaView.addObstacle(id, ox, oy);
+            }
+
+            // Handle Map Clear: {"clear": true}
+            if (json.has("clear") && json.getBoolean("clear")) {
+                arenaView.clearMap();
+            }
+
+        } catch (JSONException ignored) {
+            // Not a valid JSON or doesn't match expected pattern
+        }
     }
 
     @Override
