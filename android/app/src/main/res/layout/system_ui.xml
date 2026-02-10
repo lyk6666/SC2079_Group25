@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -26,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:visibility="visible">
+            android:visibility="invisible">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -73,19 +74,19 @@
                 android:id="@+id/scrollTerminal"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:layout_marginTop="8dp"
                 android:layout_weight="1"
                 android:background="#F0F0F0"
-                android:layout_marginTop="8dp"
                 android:padding="8dp">
 
                 <TextView
                     android:id="@+id/txtTerminal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:contentDescription="Terminal logs"
                     android:textColor="#333333"
-                    android:textSize="10sp"
                     android:textIsSelectable="true"
-                    android:contentDescription="Terminal logs" />
+                    android:textSize="10sp" />
             </ScrollView>
 
             <LinearLayout
@@ -93,15 +94,17 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingTop="8dp">
+
                 <EditText
                     android:id="@+id/edtSend"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:minHeight="48dp"
                     android:hint="Type message"
                     android:importantForAutofill="no"
-                    android:inputType="text" />
+                    android:inputType="text"
+                    android:minHeight="48dp" />
+
                 <Button
                     android:id="@+id/btnSend"
                     android:layout_width="wrap_content"
@@ -117,7 +120,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -126,71 +129,62 @@
                 android:gravity="center_vertical">
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Map Size: "
+                    android:layout_weight="1"
+                    android:text="Exploration Arena"
                     android:textStyle="bold" />
 
-                <EditText
-                    android:id="@+id/edtGridX"
-                    android:layout_width="40dp"
-                    android:layout_height="wrap_content"
-                    android:hint="X"
-                    android:inputType="number"
-                    android:text="20"
-                    android:importantForAutofill="no" />
-
-                <TextView
+                <Button
+                    android:id="@+id/btnSendObs"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text=" x " />
-
-                <EditText
-                    android:id="@+id/edtGridY"
-                    android:layout_width="40dp"
-                    android:layout_height="wrap_content"
-                    android:hint="Y"
-                    android:inputType="number"
-                    android:text="20"
-                    android:importantForAutofill="no" />
+                    android:text="Send Obs"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp" />
 
                 <Button
-                    android:id="@+id/btnSetGrid"
+                    android:id="@+id/btnUndo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Set"
-                    style="?android:attr/buttonBarButtonStyle" />
-            </LinearLayout>
+                    android:text="Undo"
+                    android:minWidth="60dp"
+                    android:layout_marginEnd="4dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Exploration Arena"
-                android:textStyle="bold"
-                android:paddingTop="8dp" />
+                <Button
+                    android:id="@+id/btnRedo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Redo"
+                    android:minWidth="60dp" />
+            </LinearLayout>
 
             <!-- Arena View -->
             <com.example.sc2079_group25.ArenaView
                 android:id="@+id/arenaView"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
                 android:layout_marginTop="4dp"
+                android:layout_weight="1"
                 android:background="#FFFFFF"
+                android:clickable="true"
+                android:focusable="true"
                 android:contentDescription="Exploration arena map" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center_horizontal"
+                android:orientation="horizontal"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Robot Status: "
                     android:textStyle="bold" />
+
                 <TextView
                     android:id="@+id/txtRobotStatus"
                     android:layout_width="wrap_content"
@@ -204,38 +198,46 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:columnCount="3"
-                android:rowCount="3"
-                android:paddingBottom="16dp">
+                android:paddingBottom="16dp"
+                android:rowCount="3">
 
-                <View android:layout_width="48dp" android:layout_height="48dp" />
+                <View
+                    android:layout_width="48dp"
+                    android:layout_height="48dp" />
+
                 <ImageButton
                     android:id="@+id/btnForward"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@android:drawable/arrow_up_float"
-                    android:contentDescription="Forward" />
-                <View android:layout_width="48dp" android:layout_height="48dp" />
+                    android:contentDescription="Forward"
+                    android:src="@android:drawable/arrow_up_float" />
+
+                <View
+                    android:layout_width="48dp"
+                    android:layout_height="48dp" />
 
                 <ImageButton
                     android:id="@+id/btnLeft"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@android:drawable/arrow_down_float"
+                    android:contentDescription="Turn Left"
                     android:rotation="90"
-                    android:contentDescription="Turn Left" />
+                    android:src="@android:drawable/arrow_down_float" />
+
                 <ImageButton
                     android:id="@+id/btnReverse"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@android:drawable/arrow_down_float"
-                    android:contentDescription="Reverse" />
+                    android:contentDescription="Reverse"
+                    android:src="@android:drawable/arrow_down_float" />
+
                 <ImageButton
                     android:id="@+id/btnRight"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@android:drawable/arrow_down_float"
+                    android:contentDescription="Turn Right"
                     android:rotation="270"
-                    android:contentDescription="Turn Right" />
+                    android:src="@android:drawable/arrow_down_float" />
             </GridLayout>
         </LinearLayout>
 

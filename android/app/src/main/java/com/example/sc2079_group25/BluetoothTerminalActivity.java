@@ -41,7 +41,7 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     private DeviceListAdapter deviceAdapter;
 
     private TextView txtConnState, txtTerminal, txtRobotStatus;
-    private EditText edtSend, edtGridX, edtGridY;
+    private EditText edtSend;
     private ScrollView scrollTerminal;
     private ArenaView arenaView;
 
@@ -90,8 +90,6 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         txtTerminal = findViewById(R.id.txtTerminal);
         txtRobotStatus = findViewById(R.id.txtRobotStatus);
         edtSend = findViewById(R.id.edtSend);
-        edtGridX = findViewById(R.id.edtGridX);
-        edtGridY = findViewById(R.id.edtGridY);
         scrollTerminal = findViewById(R.id.scrollTerminal);
         arenaView = findViewById(R.id.arenaView);
 
@@ -99,7 +97,9 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         Button btnSend = findViewById(R.id.btnSend);
         Button btnDisconnect = findViewById(R.id.btnDisconnect);
         Button btnReconnect = findViewById(R.id.btnReconnect);
-        Button btnSetGrid = findViewById(R.id.btnSetGrid);
+        Button btnUndo = findViewById(R.id.btnUndo);
+        Button btnRedo = findViewById(R.id.btnRedo);
+        Button btnSendObs = findViewById(R.id.btnSendObs);
 
         // Robot control buttons
         ImageButton btnForward = findViewById(R.id.btnForward);
@@ -144,24 +144,40 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
             edtSend.setText("");
         });
 
-        btnSetGrid.setOnClickListener(v -> {
-            try {
-                int x = Integer.parseInt(edtGridX.getText().toString());
-                int y = Integer.parseInt(edtGridY.getText().toString());
-                if (x > 0 && y > 0) {
-                    arenaView.setGridSize(x, y);
-                    appendTerminal("[UI] Grid size set to " + x + "x" + y);
-                }
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, "Invalid grid size", Toast.LENGTH_SHORT).show();
+        btnUndo.setOnClickListener(v -> arenaView.revert());
+        btnRedo.setOnClickListener(v -> arenaView.deRevert());
+
+        btnSendObs.setOnClickListener(v -> {
+            for (ArenaView.Obstacle obs : arenaView.getObstacles()) {
+                String dirStr = "N";
+                if (obs.direction == 1) dirStr = "E";
+                else if (obs.direction == 2) dirStr = "S";
+                else if (obs.direction == 3) dirStr = "W";
+
+                String msg = String.format("Obstacle, %d, %s, (%d,%d), %s", 
+                    obs.id, dirStr, (int)obs.x, (int)obs.y, obs.value);
+                sendBluetoothCommand(msg);
             }
+            Toast.makeText(this, "Obstacles sent", Toast.LENGTH_SHORT).show();
         });
 
-        // Control button listeners
-        btnForward.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.FORWARD));
-        btnReverse.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.REVERSE));
-        btnLeft.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_LEFT));
-        btnRight.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_RIGHT));
+        // Control button listeners with LOCAL UI update first
+        btnForward.setOnClickListener(v -> {
+            arenaView.moveRobotForward();
+            sendBluetoothCommand(RobotCommands.FORWARD);
+        });
+        btnReverse.setOnClickListener(v -> {
+            arenaView.moveRobotBackward();
+            sendBluetoothCommand(RobotCommands.REVERSE);
+        });
+        btnLeft.setOnClickListener(v -> {
+            arenaView.turnRobotLeft();
+            sendBluetoothCommand(RobotCommands.TURN_LEFT);
+        });
+        btnRight.setOnClickListener(v -> {
+            arenaView.turnRobotRight();
+            sendBluetoothCommand(RobotCommands.TURN_RIGHT);
+        });
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -340,6 +356,43 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     @Override
     public void onLineReceived(String line) {
         appendTerminal("[RX] " + line);
+        
+        // Handle "TARGET, <id>, <Value>" protocol
+        if (line.startsWith("TARGET,")) {
+            try {
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    int id = Integer.parseInt(parts[1].trim());
+                    String value = parts[2].trim();
+                    arenaView.updateObstacleValue(id, value);
+                }
+            } catch (Exception e) {
+                appendTerminal("[Error] Failed to parse target update: " + line);
+            }
+            return;
+        }
+
+        // Handle "ROBOT, <x>, <y>, <direction>" protocol
+        if (line.startsWith("ROBOT,")) {
+            try {
+                String[] parts = line.split(",");
+                if (parts.length >= 4) {
+                    float rx = Float.parseFloat(parts[1].trim());
+                    float ry = Float.parseFloat(parts[2].trim());
+                    String dirStr = parts[3].trim().toUpperCase();
+                    float rotation = 0;
+                    if (dirStr.equals("E")) rotation = 90;
+                    else if (dirStr.equals("S")) rotation = 180;
+                    else if (dirStr.equals("W")) rotation = 270;
+                    
+                    arenaView.updateRobot(rx, ry, rotation);
+                }
+            } catch (Exception e) {
+                appendTerminal("[Error] Failed to parse robot update: " + line);
+            }
+            return;
+        }
+
         tryParseRobotData(line);
     }
 
