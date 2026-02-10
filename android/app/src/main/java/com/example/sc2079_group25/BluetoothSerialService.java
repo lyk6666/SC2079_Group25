@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 
 public class BluetoothSerialService {
     private static final String TAG = "BtSerialService";
+    private static final int AUTO_RECONNECT_DELAY_MS = 2000;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final BluetoothEventListener listener;
@@ -33,6 +34,7 @@ public class BluetoothSerialService {
     private ConnectedThread connectedThread;
 
     private volatile int state = BtConstants.STATE_NONE;
+    private boolean persistentConnection = false;
 
     public BluetoothSerialService(Context context, BluetoothEventListener listener) {
         this.appContext = context.getApplicationContext();
@@ -43,6 +45,11 @@ public class BluetoothSerialService {
     public synchronized int getState() { return state; }
 
     public synchronized void connect(BluetoothDevice device) {
+        persistentConnection = true;
+        connectInternal(device);
+    }
+
+    private synchronized void connectInternal(BluetoothDevice device) {
         disconnectInternal();
 
         updateState(
@@ -66,13 +73,14 @@ public class BluetoothSerialService {
 
         try {
             BluetoothDevice device = adapter.getRemoteDevice(lastAddr);
-            connect(device);
+            connectInternal(device);
         } catch (IllegalArgumentException e) {
             postError("Invalid device address: " + lastAddr, e);
         }
     }
 
     public synchronized void disconnect() {
+        persistentConnection = false;
         disconnectInternal();
         updateState(BtConstants.STATE_NONE, "Disconnected");
     }
@@ -95,7 +103,6 @@ public class BluetoothSerialService {
             if (state != BtConstants.STATE_CONNECTED || connectedThread == null) return;
             r = connectedThread;
         }
-        // Normalize line endings to \r\n for serial devices
         if (!text.endsWith("\r\n")) {
             if (text.endsWith("\n")) text = text.substring(0, text.length() - 1) + "\r\n";
             else text = text + "\r\n";
@@ -152,7 +159,6 @@ public class BluetoothSerialService {
         public void run() {
             setName("ConnectThread-" + device.getAddress());
 
-            // Always cancel discovery because it slows down the connection
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter != null) {
                 try {
@@ -161,7 +167,6 @@ public class BluetoothSerialService {
             }
 
             try {
-                // Try Secure RFCOMM, then Insecure, then Fallback
                 try {
                     Log.d(TAG, "Attempting Secure RFCOMM connection...");
                     socket = device.createRfcommSocketToServiceRecord(BtConstants.SPP_UUID);
@@ -200,6 +205,12 @@ public class BluetoothSerialService {
                 try {
                     if (socket != null) socket.close();
                 } catch (IOException ignored) {}
+
+                synchronized (BluetoothSerialService.this) {
+                    if (persistentConnection) {
+                        mainHandler.postDelayed(BluetoothSerialService.this::reconnect, AUTO_RECONNECT_DELAY_MS);
+                    }
+                }
             }
         }
 
@@ -235,18 +246,15 @@ public class BluetoothSerialService {
                     }
 
                     Log.d(TAG, "Read " + n + " bytes from device");
-                    // Post raw chunk directly for immediate feedback, bypassing terminator check
                     String rawData = new String(buffer, 0, n, StandardCharsets.UTF_8);
                     postLine(rawData.replace("\r", "[R]").replace("\n", "[N]"));
 
                     for (int i = 0; i < n; i++) {
                         byte b = buffer[i];
-                        // Treat both \n and \r as line terminators
                         if (b == '\n' || b == '\r') {
                             if (lineBuffer.size() > 0) {
                                 byte[] bytes = lineBuffer.toByteArray();
                                 String line = new String(bytes, StandardCharsets.UTF_8).trim();
-                                Log.d(TAG, "Completed line: " + line);
                                 if (!line.isEmpty()) {
                                     postLine("MSG: " + line);
                                 }
@@ -261,11 +269,18 @@ public class BluetoothSerialService {
                 if (state == BtConstants.STATE_CONNECTED) {
                     Log.e(TAG, "ConnectedThread IOException during read", e);
                     postError("Connection lost: " + e.getMessage(), e);
-                    updateState(BtConstants.STATE_NONE, "Disconnected");
                 }
             } finally {
                 Log.d(TAG, "ConnectedThread exiting");
                 cancel();
+                synchronized (BluetoothSerialService.this) {
+                    if (state == BtConstants.STATE_CONNECTED) {
+                        updateState(BtConstants.STATE_NONE, "Disconnected");
+                    }
+                    if (persistentConnection) {
+                        mainHandler.postDelayed(BluetoothSerialService.this::reconnect, AUTO_RECONNECT_DELAY_MS);
+                    }
+                }
             }
         }
 

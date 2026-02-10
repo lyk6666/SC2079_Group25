@@ -99,7 +99,10 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         Button btnReconnect = findViewById(R.id.btnReconnect);
         Button btnUndo = findViewById(R.id.btnUndo);
         Button btnRedo = findViewById(R.id.btnRedo);
+        Button btnReset = findViewById(R.id.btnReset);
         Button btnSendObs = findViewById(R.id.btnSendObs);
+        Button btnTask1 = findViewById(R.id.btnTask1);
+        Button btnTask2 = findViewById(R.id.btnTask2);
 
         // Robot control buttons
         ImageButton btnForward = findViewById(R.id.btnForward);
@@ -146,19 +149,40 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
 
         btnUndo.setOnClickListener(v -> arenaView.revert());
         btnRedo.setOnClickListener(v -> arenaView.deRevert());
+        btnReset.setOnClickListener(v -> {
+            arenaView.clearMap();
+            txtRobotStatus.setText("Waiting");
+            Toast.makeText(this, "Arena reset", Toast.LENGTH_SHORT).show();
+        });
 
         btnSendObs.setOnClickListener(v -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Task1:");
             for (ArenaView.Obstacle obs : arenaView.getObstacles()) {
                 String dirStr = "N";
                 if (obs.direction == 1) dirStr = "E";
                 else if (obs.direction == 2) dirStr = "S";
                 else if (obs.direction == 3) dirStr = "W";
 
-                String msg = String.format("Obstacle, %d, %s, (%d,%d), %s", 
-                    obs.id, dirStr, (int)obs.x, (int)obs.y, obs.value);
-                sendBluetoothCommand(msg);
+                sb.append(String.format("Obstacle, %d, %s, (%d,%d), %s; ", 
+                    obs.id, dirStr, (int)obs.x, (int)obs.y, obs.value));
             }
-            Toast.makeText(this, "Obstacles sent", Toast.LENGTH_SHORT).show();
+            if (sb.length() > 6) {
+                sendBluetoothCommand(sb.toString().trim());
+                Toast.makeText(this, "Obstacles sent", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "No obstacles to send", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnTask1.setOnClickListener(v -> {
+            sendBluetoothCommand("Task1:Start");
+            Toast.makeText(this, "Task 1 started", Toast.LENGTH_SHORT).show();
+        });
+
+        btnTask2.setOnClickListener(v -> {
+            sendBluetoothCommand("Task2:Start");
+            Toast.makeText(this, "Task 2 started", Toast.LENGTH_SHORT).show();
         });
 
         // Control button listeners with LOCAL UI update first

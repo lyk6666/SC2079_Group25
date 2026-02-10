@@ -25,23 +25,20 @@ public class ArenaView extends View {
     private final Paint labelPaint = new Paint();
     private final Paint facePaint = new Paint();
 
-    private int gridCountX = 20;
-    private int gridCountY = 20;
+    private final int gridCountX = 20;
+    private final int gridCountY = 20;
 
     private float robotX = 1, robotY = 1; // Center of 3x3 robot
     private float robotRotation = 0; // 0: N, 90: E, 180: S, 270: W
     
     private List<Obstacle> obstacles = new ArrayList<>();
     
-    // Undo/Redo stacks for obstacles
     private final Stack<List<Obstacle>> undoStack = new Stack<>();
     private final Stack<List<Obstacle>> redoStack = new Stack<>();
 
-    // Dragging state
     private float dragCurrentX, dragCurrentY;
     private int draggingId = -1;
 
-    // Layout constants
     private float startX, startY, sideLength, cellWidth, cellHeight;
     private float bankY, bankItemWidth;
     private final float labelPadding = 40f;
@@ -110,6 +107,22 @@ public class ArenaView extends View {
 
         facePaint.setColor(Color.RED);
         facePaint.setStyle(Paint.Style.FILL);
+    }
+
+    private void calculateLayout() {
+        float viewWidth = getWidth();
+        float viewHeight = getHeight();
+        if (viewWidth == 0 || viewHeight == 0) return;
+
+        sideLength = Math.min(viewWidth - labelPadding * 2, viewHeight - labelPadding - bankPadding - 20f);
+        cellWidth = sideLength / gridCountX;
+        cellHeight = sideLength / gridCountY;
+
+        startX = (viewWidth - (sideLength + labelPadding)) / 2f + labelPadding;
+        startY = (viewHeight - (sideLength + labelPadding + bankPadding)) / 2f + bankPadding;
+        
+        bankY = startY - bankPadding + 10f;
+        bankItemWidth = viewWidth / 10f;
     }
 
     private void saveState() {
@@ -214,20 +227,9 @@ public class ArenaView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        calculateLayout();
 
-        float viewWidth = getWidth();
-        float viewHeight = getHeight();
-        
-        sideLength = Math.min(viewWidth - labelPadding * 2, viewHeight - labelPadding - bankPadding - 20f);
-        cellWidth = sideLength / gridCountX;
-        cellHeight = sideLength / gridCountY;
-
-        startX = (viewWidth - (sideLength + labelPadding)) / 2f + labelPadding;
-        startY = (viewHeight - (sideLength + labelPadding + bankPadding)) / 2f + bankPadding;
-        
         // Bank
-        bankY = startY - bankPadding + 10f;
-        bankItemWidth = viewWidth / 10f;
         for (int i = 0; i < 10; i++) {
             boolean isPlaced = false;
             for (Obstacle o : obstacles) if (o.id == i) { isPlaced = true; break; }
@@ -307,7 +309,6 @@ public class ArenaView extends View {
         float bodySize = cellW * 3.0f;
         canvas.drawRect(-bodySize/2, -bodySize/2, bodySize/2, bodySize/2, robotPaint);
         
-        // Direction indicator
         Paint ind = new Paint();
         ind.setColor(Color.YELLOW);
         canvas.drawCircle(0, -bodySize/3, bodySize/10, ind);
@@ -316,6 +317,7 @@ public class ArenaView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        calculateLayout();
         float x = event.getX();
         float y = event.getY();
 
@@ -364,7 +366,6 @@ public class ArenaView extends View {
                         int gx = (int) ((x - startX) / cellWidth);
                         int gy = (gridCountY - 1) - (int) ((y - startY) / cellHeight);
 
-                        // Overlap check (3x3 robot)
                         boolean overlap = false;
                         if (gx >= robotX-1 && gx <= robotX+1 && gy >= robotY-1 && gy <= robotY+1) overlap = true;
                         for (Obstacle o : obstacles) if ((int)o.x == gx && (int)o.y == gy) overlap = true;

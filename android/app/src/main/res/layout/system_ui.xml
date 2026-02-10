@@ -136,14 +136,6 @@
                     android:textStyle="bold" />
 
                 <Button
-                    android:id="@+id/btnSendObs"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Send Obs"
-                    android:textSize="12sp"
-                    android:layout_marginEnd="4dp" />
-
-                <Button
                     android:id="@+id/btnUndo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -156,6 +148,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Redo"
+                    android:minWidth="60dp"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btnReset"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reset"
                     android:minWidth="60dp" />
             </LinearLayout>
 
@@ -164,7 +164,7 @@
                 android:id="@+id/arenaView"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="1dp"
                 android:layout_weight="1"
                 android:background="#FFFFFF"
                 android:clickable="true"
@@ -189,56 +189,95 @@
                     android:id="@+id/txtRobotStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Unknown"
+                    android:text="Waiting"
                     android:textColor="#0000FF" />
             </LinearLayout>
 
-            <GridLayout
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:columnCount="3"
-                android:paddingBottom="16dp"
-                android:rowCount="3">
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingBottom="16dp">
 
-                <View
-                    android:layout_width="48dp"
-                    android:layout_height="48dp" />
+                <GridLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3"
+                    android:rowCount="3">
 
-                <ImageButton
-                    android:id="@+id/btnForward"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:contentDescription="Forward"
-                    android:src="@android:drawable/arrow_up_float" />
+                    <View
+                        android:layout_width="48dp"
+                        android:layout_height="48dp" />
 
-                <View
-                    android:layout_width="48dp"
-                    android:layout_height="48dp" />
+                    <ImageButton
+                        android:id="@+id/btnForward"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="Forward"
+                        android:src="@android:drawable/arrow_up_float" />
 
-                <ImageButton
-                    android:id="@+id/btnLeft"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:contentDescription="Turn Left"
-                    android:rotation="90"
-                    android:src="@android:drawable/arrow_down_float" />
+                    <View
+                        android:layout_width="48dp"
+                        android:layout_height="48dp" />
 
-                <ImageButton
-                    android:id="@+id/btnReverse"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:contentDescription="Reverse"
-                    android:src="@android:drawable/arrow_down_float" />
+                    <ImageButton
+                        android:id="@+id/btnLeft"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="Turn Left"
+                        android:rotation="90"
+                        android:src="@android:drawable/arrow_down_float" />
 
-                <ImageButton
-                    android:id="@+id/btnRight"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:contentDescription="Turn Right"
-                    android:rotation="270"
-                    android:src="@android:drawable/arrow_down_float" />
-            </GridLayout>
+                    <ImageButton
+                        android:id="@+id/btnReverse"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="Reverse"
+                        android:src="@android:drawable/arrow_down_float" />
+
+                    <ImageButton
+                        android:id="@+id/btnRight"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:contentDescription="Turn Right"
+                        android:rotation="270"
+                        android:src="@android:drawable/arrow_down_float" />
+                </GridLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <Button
+                        android:id="@+id/btnSendObs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Send Obs"
+                        android:textSize="12sp"
+                        android:minHeight="40dp" />
+
+                    <Button
+                        android:id="@+id/btnTask1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Task 1"
+                        android:textSize="12sp"
+                        android:minHeight="40dp" />
+
+                    <Button
+                        android:id="@+id/btnTask2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Task 2"
+                        android:textSize="12sp"
+                        android:minHeight="40dp" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
     </FrameLayout>
