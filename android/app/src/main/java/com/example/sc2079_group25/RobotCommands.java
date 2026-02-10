@@ -1,4 +1,4 @@
-package com.example.sc2079_group25.control;
+package com.example.sc2079_group25;
 
 /**
  * Robot control protocol constants.

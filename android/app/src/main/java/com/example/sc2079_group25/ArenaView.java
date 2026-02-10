@@ -1,4 +1,4 @@
-package com.example.sc2079_group25.ui;
+package com.example.sc2079_group25;
 
 import android.content.Context;
 import android.graphics.Canvas;

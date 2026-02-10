@@ -1,4 +1,4 @@
-package com.example.sc2079_group25.bluetooth;
+package com.example.sc2079_group25;
 
 import java.util.UUID;
 

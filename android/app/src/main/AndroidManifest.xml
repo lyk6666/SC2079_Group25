@@ -37,7 +37,7 @@
 
         <!-- Main (launcher) activity -->
         <activity
-            android:name=".ui.BluetoothTerminalActivity"
+            android:name=".BluetoothTerminalActivity"
             android:exported="true">
 
             <intent-filter>

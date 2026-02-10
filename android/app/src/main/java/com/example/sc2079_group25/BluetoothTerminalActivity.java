@@ -1,4 +1,4 @@
-package com.example.sc2079_group25.ui;
+package com.example.sc2079_group25;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -25,12 +26,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.sc2079_group25.R;
-import com.example.sc2079_group25.bluetooth.BluetoothEventListener;
-import com.example.sc2079_group25.bluetooth.BluetoothSerialService;
-import com.example.sc2079_group25.bluetooth.BtConstants;
-import com.example.sc2079_group25.bluetooth.DeviceListAdapter;
-import com.example.sc2079_group25.control.RobotCommands;
+import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -48,6 +44,9 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     private EditText edtSend, edtGridX, edtGridY;
     private ScrollView scrollTerminal;
     private ArenaView arenaView;
+
+    private TabLayout tabLayout;
+    private View layoutBluetooth, layoutGrid;
 
     private boolean pendingStartDiscovery = false;
 
@@ -81,7 +80,11 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bluetooth_terminal);
+        setContentView(R.layout.system_ui);
+
+        tabLayout = findViewById(R.id.tabLayout);
+        layoutBluetooth = findViewById(R.id.layoutBluetooth);
+        layoutGrid = findViewById(R.id.layoutGrid);
 
         txtConnState = findViewById(R.id.txtConnState);
         txtTerminal = findViewById(R.id.txtTerminal);
@@ -159,6 +162,27 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         btnReverse.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.REVERSE));
         btnLeft.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_LEFT));
         btnRight.setOnClickListener(v -> sendBluetoothCommand(RobotCommands.TURN_RIGHT));
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (tab.getPosition() == 0) {
+                    layoutBluetooth.setVisibility(View.VISIBLE);
+                    layoutGrid.setVisibility(View.GONE);
+                } else {
+                    layoutBluetooth.setVisibility(View.GONE);
+                    layoutGrid.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
 
         ensureBluetoothEnabled();
         preloadPairedDevices();
@@ -321,7 +345,7 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
 
     private void tryParseRobotData(String line) {
         if (line == null) return;
-        
+
         try {
             // Find start of any JSON object in the line
             int start = line.indexOf("{");
