@@ -37,10 +37,16 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.VH
     public void upsert(BluetoothDevice d) {
         if (d == null) return;
 
-        String key = getSafeAddress(d);
-        if (key == null) return;
+        String address;
+        try {
+            address = d.getAddress();
+        } catch (SecurityException e) {
+            return;
+        }
+        
+        if (address == null) return;
 
-        unique.put(key, d);
+        unique.put(address, d);
         notifyDataSetChanged();
     }
 
@@ -84,27 +90,18 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.VH
     }
 
     private String getSafeName(BluetoothDevice d) {
-        if (d == null) return "Unknown device";
+        if (d == null) return "Unknown Device";
 
-        // Android 12+ requires BLUETOOTH_CONNECT before accessing device info
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!hasConnectPermission()) {
-                return "Permission required";
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasConnectPermission()) {
+            return "Unknown Device";
         }
 
         try {
-            String name = d.getName();   // SAFE: only called when permission granted
-            return (name != null && !name.isEmpty()) ? name : "Unknown device";
+            String name = d.getName();
+            return (name != null && !name.isEmpty()) ? name : "Unknown Device";
         } catch (SecurityException e) {
-            // Absolute last line of defense
-            return "Permission required";
+            return "Unknown Device";
         }
-    }
-
-    private String getSafeAddress(BluetoothDevice d) {
-        if (!hasConnectPermission()) return null;
-        return d.getAddress();
     }
 
     // ===== ViewHolder =====
@@ -114,23 +111,19 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.VH
 
         void bind(BluetoothDevice d) {
             TextView tv = (TextView) itemView;
+            DeviceListAdapter adapter = (DeviceListAdapter) getBindingAdapter();
 
-            DeviceListAdapter adapter =
-                    (DeviceListAdapter) getBindingAdapter();
-
-            if (adapter == null) {
-                tv.setText("Unknown device");
-                return;
+            String address;
+            try {
+                address = d.getAddress();
+            } catch (SecurityException e) {
+                address = "Unknown Address";
             }
 
-            String name = adapter.getSafeName(d);
-            String address = adapter.getSafeAddress(d);
+            String name = (adapter != null) ? adapter.getSafeName(d) : "Unknown Device";
 
-            if (address != null) {
-                tv.setText(name + "\n" + address);
-            } else {
-                tv.setText(name);
-            }
+            // Display Name and Address on separate lines
+            tv.setText(name + "\n" + address);
         }
     }
 }

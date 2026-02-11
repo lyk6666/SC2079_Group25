@@ -12,8 +12,14 @@
         android:layout_height="wrap_content"
         app:tabGravity="fill"
         app:tabMode="fixed">
-        <com.google.android.material.tabs.TabItem android:text="Bluetooth" />
-        <com.google.android.material.tabs.TabItem android:text="Grid" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bluetooth" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Grid" />
     </com.google.android.material.tabs.TabLayout>
 
     <FrameLayout
@@ -27,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:visibility="invisible">
+            android:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -38,6 +44,7 @@
                     android:id="@+id/btnScan"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     android:text="Scan" />
 
@@ -45,6 +52,7 @@
                     android:id="@+id/btnReconnect"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     android:text="Reconnect" />
 
@@ -67,7 +75,7 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerDevices"
                 android:layout_width="match_parent"
-                android:layout_height="120dp"
+                android:layout_height="200dp"
                 android:paddingTop="8dp" />
 
             <ScrollView
@@ -120,13 +128,13 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:visibility="visible">
+            android:visibility="invisible">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
@@ -139,24 +147,24 @@
                     android:id="@+id/btnUndo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Undo"
+                    android:layout_marginEnd="4dp"
                     android:minWidth="60dp"
-                    android:layout_marginEnd="4dp" />
+                    android:text="Undo" />
 
                 <Button
                     android:id="@+id/btnRedo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Redo"
+                    android:layout_marginEnd="4dp"
                     android:minWidth="60dp"
-                    android:layout_marginEnd="4dp" />
+                    android:text="Redo" />
 
                 <Button
                     android:id="@+id/btnReset"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Reset"
-                    android:minWidth="60dp" />
+                    android:minWidth="60dp"
+                    android:text="Reset" />
             </LinearLayout>
 
             <!-- Arena View -->
@@ -168,8 +176,8 @@
                 android:layout_weight="1"
                 android:background="#FFFFFF"
                 android:clickable="true"
-                android:focusable="true"
-                android:contentDescription="Exploration arena map" />
+                android:contentDescription="Exploration arena map"
+                android:focusable="true" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -196,8 +204,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center"
+                android:orientation="horizontal"
                 android:paddingBottom="16dp">
 
                 <GridLayout
@@ -248,34 +256,34 @@
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginStart="16dp">
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical">
 
                     <Button
                         android:id="@+id/btnSendObs"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="40dp"
                         android:text="Send Obs"
-                        android:textSize="12sp"
-                        android:minHeight="40dp" />
+                        android:textSize="12sp" />
 
                     <Button
                         android:id="@+id/btnTask1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
+                        android:minHeight="40dp"
                         android:text="Task 1"
-                        android:textSize="12sp"
-                        android:minHeight="40dp" />
+                        android:textSize="12sp" />
 
                     <Button
                         android:id="@+id/btnTask2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
+                        android:minHeight="40dp"
                         android:text="Task 2"
-                        android:textSize="12sp"
-                        android:minHeight="40dp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

@@ -11,8 +11,10 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -21,6 +23,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -49,6 +52,7 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     private View layoutBluetooth, layoutGrid;
 
     private boolean pendingStartDiscovery = false;
+    private AlertDialog scanDialog;
 
     private final ActivityResultLauncher<Intent> enableBtLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -73,6 +77,9 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
 
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 appendTerminal("[Scan] Discovery finished");
+                if (scanDialog != null && scanDialog.isShowing()) {
+                    scanDialog.setTitle("Select Device (Scan finished)");
+                }
             }
         }
     };
@@ -298,6 +305,38 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         if (btAdapter == null) return;
         deviceAdapter.clear();
         preloadPairedDevices();
+
+        // Create a scrollable RecyclerView with a fixed height inside the dialog
+        RecyclerView dialogRv = new RecyclerView(this);
+        dialogRv.setLayoutManager(new LinearLayoutManager(this));
+        dialogRv.setAdapter(deviceAdapter);
+        
+        // Wrap RecyclerView in a container to enforce fixed size
+        FrameLayout container = new FrameLayout(this);
+        container.addView(dialogRv);
+        container.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 
+                250 // Height in pixels
+        ));
+        
+        // Set RecyclerView to fill the container
+        dialogRv.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        scanDialog = new AlertDialog.Builder(this)
+                .setTitle("Select Device")
+                .setView(container) // Add the container, not just the RV
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    try {
+                        if (btAdapter.isDiscovering()) btAdapter.cancelDiscovery();
+                    } catch (SecurityException ignored) {}
+                })
+                .create();
+        
+        scanDialog.show();
+
         try {
             if (btAdapter.isDiscovering()) btAdapter.cancelDiscovery();
             btAdapter.startDiscovery();
@@ -306,6 +345,9 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
     }
 
     private void onDeviceSelected(BluetoothDevice device) {
+        if (scanDialog != null && scanDialog.isShowing()) {
+            scanDialog.dismiss();
+        }
         if (!hasConnectPermission()) {
             requestBtPermissions();
             return;
