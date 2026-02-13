@@ -1,14 +1,17 @@
 package com.example.sc2079_group25;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -24,6 +27,8 @@ public class ArenaView extends View {
     private final Paint robotPaint = new Paint();
     private final Paint labelPaint = new Paint();
     private final Paint facePaint = new Paint();
+
+    private Bitmap carUpBitmap, carDownBitmap, carLeftBitmap, carRightBitmap;
 
     private final int gridCountX = 20;
     private final int gridCountY = 20;
@@ -107,6 +112,11 @@ public class ArenaView extends View {
 
         facePaint.setColor(Color.RED);
         facePaint.setStyle(Paint.Style.FILL);
+
+        carUpBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.car_up);
+        carDownBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.car_down);
+        carLeftBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.car_left);
+        carRightBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.car_right);
     }
 
     private void calculateLayout() {
@@ -225,7 +235,7 @@ public class ArenaView extends View {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         calculateLayout();
 
@@ -274,7 +284,7 @@ public class ArenaView extends View {
         if (robotX >= 0 && robotY >= 0) {
             float rx = startX + (robotX + 0.5f) * cellWidth;
             float ry = startY + (gridCountY - 1 - robotY + 0.5f) * cellHeight;
-            drawRobot(canvas, rx, ry, robotRotation, cellWidth, cellHeight);
+            drawRobot(canvas, rx, ry, robotRotation, cellWidth);
         }
     }
 
@@ -301,17 +311,34 @@ public class ArenaView extends View {
         }
     }
 
-    private void drawRobot(Canvas canvas, float x, float y, float rotation, float cellW, float cellH) {
+    private void drawRobot(Canvas canvas, float x, float y, float rotation, float cellW) {
         canvas.save();
         canvas.translate(x, y);
-        canvas.rotate(rotation);
-        
-        float bodySize = cellW * 3.0f;
-        canvas.drawRect(-bodySize/2, -bodySize/2, bodySize/2, bodySize/2, robotPaint);
-        
-        Paint ind = new Paint();
-        ind.setColor(Color.YELLOW);
-        canvas.drawCircle(0, -bodySize/3, bodySize/10, ind);
+
+        Bitmap robotBitmap;
+        int rot = (int) rotation;
+        switch(rot) {
+            case 90:
+                robotBitmap = carRightBitmap;
+                break;
+            case 180:
+                robotBitmap = carDownBitmap;
+                break;
+            case 270:
+                robotBitmap = carLeftBitmap;
+                break;
+            case 0:
+            default:
+                robotBitmap = carUpBitmap;
+                break;
+        }
+
+        if (robotBitmap != null) {
+            float bodySize = cellW * 3.0f;
+            Rect destRect = new Rect((int)(-bodySize/2), (int)(-bodySize/2), (int)(bodySize/2), (int)(bodySize/2));
+            canvas.drawBitmap(robotBitmap, null, destRect, null);
+        }
+
         canvas.restore();
     }
 
@@ -366,9 +393,13 @@ public class ArenaView extends View {
                         int gx = (int) ((x - startX) / cellWidth);
                         int gy = (gridCountY - 1) - (int) ((y - startY) / cellHeight);
 
-                        boolean overlap = false;
-                        if (gx >= robotX-1 && gx <= robotX+1 && gy >= robotY-1 && gy <= robotY+1) overlap = true;
-                        for (Obstacle o : obstacles) if ((int)o.x == gx && (int)o.y == gy) overlap = true;
+                        boolean overlap = (gx >= robotX - 1 && gx <= robotX + 1 && gy >= robotY - 1 && gy <= robotY + 1);
+                        for (Obstacle o : obstacles) {
+                            if ((int) o.x == gx && (int) o.y == gy) {
+                                overlap = true;
+                                break;
+                            }
+                        }
                         
                         if (!overlap) {
                             saveState();
@@ -382,5 +413,11 @@ public class ArenaView extends View {
                 break;
         }
         return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        return true;
     }
 }
