@@ -12,6 +12,7 @@ public final class BtConstants {
     public static final int STATE_NONE = 0;
     public static final int STATE_CONNECTING = 1;
     public static final int STATE_CONNECTED = 2;
+    public static final int STATE_LISTENING = 3;
 
     public static final String PREFS_NAME = "BT_TERMINAL_PREFS";
     public static final String KEY_LAST_DEVICE = "last_device_addr";

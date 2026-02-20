@@ -3,6 +3,7 @@ package com.example.sc2079_group25;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -23,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 public class BluetoothSerialService {
     private static final String TAG = "BtSerialService";
-    private static final int AUTO_RECONNECT_DELAY_MS = 5000;
+    private static final String NAME_SECURE = "BluetoothSerialServiceSecure";
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final BluetoothEventListener listener;
@@ -32,9 +33,9 @@ public class BluetoothSerialService {
 
     private ConnectThread connectThread;
     private ConnectedThread connectedThread;
+    private AcceptThread acceptThread;
 
     private volatile int state = BtConstants.STATE_NONE;
-    private boolean persistentConnection = false;
 
     public BluetoothSerialService(Context context, BluetoothEventListener listener) {
         this.appContext = context.getApplicationContext();
@@ -44,20 +45,94 @@ public class BluetoothSerialService {
 
     public synchronized int getState() { return state; }
 
-    public synchronized void connect(BluetoothDevice device) {
-        connectInternal(device);
+    private void updateState(int newState, String detail) {
+        state = newState;
+        mainHandler.post(() -> listener.onConnectionStateChanged(newState, detail));
     }
 
-    private synchronized void connectInternal(BluetoothDevice device) {
-        disconnectInternal();
+    public synchronized void connect(BluetoothDevice device) {
+        // Cancel any thread attempting to make a connection
+        if (state == BtConstants.STATE_CONNECTING) {
+            if (connectThread != null) {
+                connectThread.cancel();
+                connectThread = null;
+            }
+        }
 
-        updateState(
-                BtConstants.STATE_CONNECTING,
-                "Connecting to " + safeDeviceName(device)
-        );
+        // Cancel any thread currently running a connection
+        if (connectedThread != null) {
+            connectedThread.cancel();
+            connectedThread = null;
+        }
+
+        updateState(BtConstants.STATE_CONNECTING, "Connecting to " + safeDeviceName(device));
 
         connectThread = new ConnectThread(device);
         connectThread.start();
+    }
+
+    private synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
+        // Cancel the thread that completed the connection
+        if (connectThread != null) {
+            connectThread.cancel();
+            connectThread = null;
+        }
+
+        // Cancel any thread currently running a connection
+        if (connectedThread != null) {
+            connectedThread.cancel();
+            connectedThread = null;
+        }
+
+        // Cancel the accept thread because we're now connected
+        if (acceptThread != null) {
+            acceptThread.cancel();
+            acceptThread = null;
+        }
+
+        updateState(BtConstants.STATE_CONNECTED, "Connected to " + safeDeviceName(device));
+
+        try {
+            connectedThread = new ConnectedThread(socket);
+            connectedThread.start();
+        } catch (IOException e) {
+            Log.e(TAG, "ConnectedThread initiation failed", e);
+            postError("Failed to start data thread", e);
+            disconnect();
+        }
+    }
+
+    public synchronized void startListening() {
+        if (connectedThread != null) {
+            connectedThread.cancel();
+            connectedThread = null;
+        }
+        if (connectThread != null) {
+            connectThread.cancel();
+            connectThread = null;
+        }
+
+        if (acceptThread == null) {
+            acceptThread = new AcceptThread();
+            acceptThread.start();
+        }
+        updateState(BtConstants.STATE_LISTENING, "Waiting for device...");
+    }
+
+    public synchronized void disconnect() {
+        if (connectThread != null) {
+            connectThread.cancel();
+            connectThread = null;
+        }
+        if (connectedThread != null) {
+            connectedThread.cancel();
+            connectedThread = null;
+        }
+        if (acceptThread != null) {
+            acceptThread.cancel();
+            acceptThread = null;
+        }
+        updateState(BtConstants.STATE_NONE, "Disconnected");
     }
 
     public void reconnect() {
@@ -72,36 +147,10 @@ public class BluetoothSerialService {
 
         try {
             BluetoothDevice device = adapter.getRemoteDevice(lastAddr);
-            connectInternal(device);
+            connect(device);
         } catch (IllegalArgumentException e) {
             postError("Invalid device address: " + lastAddr, e);
         }
-    }
-
-    public synchronized void disconnect() {
-        persistentConnection = false;
-        disconnectInternal();
-        updateState(BtConstants.STATE_NONE, "Disconnected");
-    }
-
-    public void enableAutoReconnect() {
-        persistentConnection = true;
-    }
-
-    public void disableAutoReconnect() {
-        persistentConnection = false;
-    }
-
-    private synchronized void disconnectInternal() {
-        if (connectThread != null) {
-            connectThread.cancel();
-            connectThread = null;
-        }
-        if (connectedThread != null) {
-            connectedThread.cancel();
-            connectedThread = null;
-        }
-        state = BtConstants.STATE_NONE;
     }
 
     public void writeLine(String text) {
@@ -116,11 +165,6 @@ public class BluetoothSerialService {
         }
         Log.d(TAG, "Writing: " + text.replace("\r", "[R]").replace("\n", "[N]"));
         r.write(text.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private void updateState(int newState, String detail) {
-        state = newState;
-        mainHandler.post(() -> listener.onConnectionStateChanged(newState, detail));
     }
 
     private void postLine(String line) {
@@ -152,6 +196,64 @@ public class BluetoothSerialService {
 
     private void saveLastDevice(BluetoothDevice device) {
         prefs.edit().putString(BtConstants.KEY_LAST_DEVICE, device.getAddress()).apply();
+    }
+
+    private class AcceptThread extends Thread {
+        private final BluetoothServerSocket serverSocket;
+
+        public AcceptThread() {
+            BluetoothServerSocket tmp = null;
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (hasConnectPermission()) {
+                    tmp = adapter.listenUsingRfcommWithServiceRecord(NAME_SECURE, BtConstants.SPP_UUID);
+                }
+            } catch (IOException | SecurityException e) {
+                Log.e(TAG, "Socket listen() failed", e);
+            }
+            serverSocket = tmp;
+        }
+
+        public void run() {
+            setName("AcceptThread");
+            BluetoothSocket socket = null;
+
+            while (state != BtConstants.STATE_CONNECTED && serverSocket != null) {
+                try {
+                    socket = serverSocket.accept();
+                } catch (IOException e) {
+                    Log.e(TAG, "Socket accept() failed", e);
+                    break;
+                }
+
+                if (socket != null) {
+                    synchronized (BluetoothSerialService.this) {
+                        switch (state) {
+                            case BtConstants.STATE_LISTENING:
+                            case BtConstants.STATE_CONNECTING:
+                                connected(socket, socket.getRemoteDevice());
+                                break;
+                            case BtConstants.STATE_NONE:
+                            case BtConstants.STATE_CONNECTED:
+                                try {
+                                    socket.close();
+                                } catch (IOException e) {
+                                    Log.e(TAG, "Could not close unwanted socket", e);
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void cancel() {
+            try {
+                if (serverSocket != null) serverSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "ServerSocket close() failed", e);
+            }
+        }
     }
 
     private class ConnectThread extends Thread {
@@ -194,29 +296,20 @@ public class BluetoothSerialService {
                 saveLastDevice(device);
 
                 synchronized (BluetoothSerialService.this) {
-                    if (state == BtConstants.STATE_NONE) {
-                        try { socket.close(); } catch (IOException ignored) {}
-                        return;
-                    }
-                    updateState(BtConstants.STATE_CONNECTED, "Connected to " + safeDeviceName(device));
-
                     connectThread = null;
-                    connectedThread = new ConnectedThread(socket);
-                    connectedThread.start();
                 }
+                connected(socket, device);
 
             } catch (Exception e) {
                 Log.e(TAG, "Connect failed", e);
                 postError("Connection failed: " + e.getMessage(), e);
-                updateState(BtConstants.STATE_NONE, "Connection failed");
                 try {
                     if (socket != null) socket.close();
                 } catch (IOException ignored) {}
-
+                
                 synchronized (BluetoothSerialService.this) {
-                    if (persistentConnection) {
-                        mainHandler.postDelayed(BluetoothSerialService.this::reconnect, AUTO_RECONNECT_DELAY_MS);
-                    }
+                    connectThread = null;
+                    updateState(BtConstants.STATE_NONE, "Connection failed");
                 }
             }
         }
@@ -279,13 +372,14 @@ public class BluetoothSerialService {
                 }
             } finally {
                 Log.d(TAG, "ConnectedThread exiting");
-                cancel();
+                
                 synchronized (BluetoothSerialService.this) {
                     if (state == BtConstants.STATE_CONNECTED) {
-                        updateState(BtConstants.STATE_NONE, "Disconnected");
-                    }
-                    if (persistentConnection) {
-                        mainHandler.postDelayed(BluetoothSerialService.this::reconnect, AUTO_RECONNECT_DELAY_MS);
+                        // Unexpected disconnection
+                        mainHandler.post(BluetoothSerialService.this::startListening);
+                    } else {
+                        // Expected disconnection (manual)
+                        cancel();
                     }
                 }
             }

@@ -417,6 +417,7 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         String s;
         if (state == BtConstants.STATE_CONNECTED) s = "Connected";
         else if (state == BtConstants.STATE_CONNECTING) s = "Connecting";
+        else if (state == BtConstants.STATE_LISTENING) s = "Listening (Waiting for device)";
         else s = "Not connected";
 
         txtConnState.setText(s + " - " + detail);
