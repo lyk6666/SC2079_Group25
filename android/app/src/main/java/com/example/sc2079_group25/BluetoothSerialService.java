@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 
 public class BluetoothSerialService {
     private static final String TAG = "BtSerialService";
-    private static final int AUTO_RECONNECT_DELAY_MS = 2000;
+    private static final int AUTO_RECONNECT_DELAY_MS = 5000;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final BluetoothEventListener listener;
@@ -45,7 +45,6 @@ public class BluetoothSerialService {
     public synchronized int getState() { return state; }
 
     public synchronized void connect(BluetoothDevice device) {
-        persistentConnection = true;
         connectInternal(device);
     }
 
@@ -83,6 +82,14 @@ public class BluetoothSerialService {
         persistentConnection = false;
         disconnectInternal();
         updateState(BtConstants.STATE_NONE, "Disconnected");
+    }
+
+    public void enableAutoReconnect() {
+        persistentConnection = true;
+    }
+
+    public void disableAutoReconnect() {
+        persistentConnection = false;
     }
 
     private synchronized void disconnectInternal() {
