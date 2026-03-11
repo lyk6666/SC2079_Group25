@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.tabs.TabLayout;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -167,22 +168,36 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
         });
 
         btnSendObs.setOnClickListener(v -> {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Task1:");
-            for (ArenaView.Obstacle obs : arenaView.getObstacles()) {
-                String dirStr = "N";
-                if (obs.direction == 1) dirStr = "E";
-                else if (obs.direction == 2) dirStr = "S";
-                else if (obs.direction == 3) dirStr = "W";
-
-                sb.append(String.format("Obstacle, %d, %s, (%d,%d), %s; ", 
-                    obs.id, dirStr, (int)obs.x, (int)obs.y, obs.value));
-            }
-            if (sb.length() > 6) {
-                sendBluetoothCommand(sb.toString().trim());
-                Toast.makeText(this, "Obstacles sent", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "No obstacles to send", Toast.LENGTH_SHORT).show();
+            try {
+                JSONObject root = new JSONObject();
+                root.put("cat", "obstacles");
+                
+                JSONArray obsArray = new JSONArray();
+                for (ArenaView.Obstacle obs : arenaView.getObstacles()) {
+                    JSONObject obsJson = new JSONObject();
+                    obsJson.put("x", (int) obs.x);
+                    obsJson.put("y", (int) obs.y);
+                    obsJson.put("id", obs.id);
+                    
+                    int d = 0; // N=0, E=2, S=4, W=6 based on common 8-dir models, or just 0,1,2,3
+                    // The current code uses 0=N, 1=E, 2=S, 3=W. Let's keep that or map to degrees.
+                    // Assuming target wants a specific mapping for direction:
+                    int dirValue = 0;
+                    if (obs.direction == 1) dirValue = 1; // E
+                    else if (obs.direction == 2) dirValue = 2; // S
+                    else if (obs.direction == 3) dirValue = 3; // W
+                    
+                    obsJson.put("d", dirValue);
+                    obsArray.put(obsJson);
+                }
+                root.put("value", obsArray);
+                
+                String jsonStr = root.toString();
+                sendBluetoothCommand(jsonStr);
+                Toast.makeText(this, "Obstacles sent (JSON)", Toast.LENGTH_SHORT).show();
+                
+            } catch (JSONException e) {
+                Toast.makeText(this, "Error creating JSON", Toast.LENGTH_SHORT).show();
             }
         });
 
