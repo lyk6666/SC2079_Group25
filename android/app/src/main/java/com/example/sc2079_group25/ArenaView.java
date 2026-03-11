@@ -43,6 +43,12 @@ public class ArenaView extends View {
 
     private float dragCurrentX, dragCurrentY;
     private int draggingId = -1;
+    private int draggingDirection = 0;
+    private String draggingValue = "none";
+    private boolean isDraggingFromGrid = false;
+    private float touchStartX, touchStartY;
+    private boolean movedEnough = false;
+    private Obstacle clickedObstacle = null;
 
     private float startX, startY, sideLength, cellWidth, cellHeight;
     private float bankY, bankItemWidth;
@@ -277,7 +283,8 @@ public class ArenaView extends View {
 
         // Dragging
         if (draggingId != -1) {
-            drawObstacle(canvas, dragCurrentX - cellWidth/2, dragCurrentY - cellHeight/2, cellWidth, cellHeight, String.valueOf(draggingId), 0, true);
+            String display = draggingValue.equals("none") ? String.valueOf(draggingId) : draggingValue;
+            drawObstacle(canvas, dragCurrentX - cellWidth/2, dragCurrentY - cellHeight/2, cellWidth, cellHeight, display, draggingDirection, true);
         }
 
         // Robot (3x3)
@@ -350,6 +357,13 @@ public class ArenaView extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                touchStartX = x;
+                touchStartY = y;
+                movedEnough = false;
+                clickedObstacle = null;
+                draggingId = -1;
+
+                // Check Bank
                 if (y >= bankY && y <= bankY + cellHeight) {
                     int id = (int) (x / bankItemWidth);
                     if (id >= 0 && id < 10) {
@@ -357,21 +371,25 @@ public class ArenaView extends View {
                         for (Obstacle o : obstacles) if (o.id == id) { alreadyPlaced = true; break; }
                         if (!alreadyPlaced) {
                             draggingId = id;
+                            draggingDirection = 0;
+                            draggingValue = "none";
+                            isDraggingFromGrid = false;
                             dragCurrentX = x;
                             dragCurrentY = y;
+                            movedEnough = true; 
                             invalidate();
                             return true;
                         }
                     }
                 }
+                
+                // Check Grid
                 if (x >= startX && x <= startX + sideLength && y >= startY && y <= startY + sideLength) {
                     int gx = (int) ((x - startX) / cellWidth);
                     int gy = (gridCountY - 1) - (int) ((y - startY) / cellHeight);
                     for (Obstacle o : obstacles) {
                         if ((int)o.x == gx && (int)o.y == gy) {
-                            saveState();
-                            o.direction = (o.direction + 1) % 4;
-                            invalidate();
+                            clickedObstacle = o;
                             return true;
                         }
                     }
@@ -379,6 +397,21 @@ public class ArenaView extends View {
                 break;
 
             case MotionEvent.ACTION_MOVE:
+                if (!movedEnough && clickedObstacle != null) {
+                    float dx = x - touchStartX;
+                    float dy = y - touchStartY;
+                    if (Math.sqrt(dx*dx + dy*dy) > cellWidth / 3f) {
+                        saveState();
+                        movedEnough = true;
+                        draggingId = clickedObstacle.id;
+                        draggingDirection = clickedObstacle.direction;
+                        draggingValue = clickedObstacle.value;
+                        isDraggingFromGrid = true;
+                        obstacles.remove(clickedObstacle);
+                        // No need to set clickedObstacle to null yet, but it's effectively being dragged
+                    }
+                }
+
                 if (draggingId != -1) {
                     dragCurrentX = x;
                     dragCurrentY = y;
@@ -402,11 +435,29 @@ public class ArenaView extends View {
                         }
                         
                         if (!overlap) {
-                            saveState();
-                            obstacles.add(new Obstacle(draggingId, gx, gy));
+                            if (!isDraggingFromGrid) saveState();
+                            Obstacle newObs = new Obstacle(draggingId, gx, gy);
+                            newObs.direction = draggingDirection;
+                            newObs.value = draggingValue;
+                            obstacles.add(newObs);
+                        }
+                    } else {
+                        // Dragged out of grid
+                        if (isDraggingFromGrid) {
+                            // Already removed from obstacles list in ACTION_MOVE
+                            // If we want to support removal via drag-out, we just leave it out.
+                            // State was already saved in ACTION_MOVE start.
                         }
                     }
                     draggingId = -1;
+                    clickedObstacle = null;
+                    invalidate();
+                    return true;
+                } else if (clickedObstacle != null) {
+                    // It was a simple click
+                    saveState();
+                    clickedObstacle.direction = (clickedObstacle.direction + 1) % 4;
+                    clickedObstacle = null;
                     invalidate();
                     return true;
                 }
