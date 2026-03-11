@@ -450,7 +450,18 @@ public class BluetoothTerminalActivity extends AppCompatActivity implements Blue
                 if (parts.length >= 3) {
                     int id = Integer.parseInt(parts[1].trim());
                     String value = parts[2].trim();
-                    arenaView.updateObstacleValue(id, value);
+                    
+                    // New restriction: Only accept first two characters and must be Digit
+                    if (value.length() >= 2) {
+                        String firstTwo = value.substring(0, 2);
+                        if (Character.isDigit(firstTwo.charAt(0)) && Character.isDigit(firstTwo.charAt(1))) {
+                            arenaView.updateObstacleValue(id, firstTwo);
+                        } else {
+                            appendTerminal("[Error] First two characters must be digits: " + firstTwo);
+                        }
+                    } else {
+                        appendTerminal("[Error] Target value too short (need at least 2 digits): " + value);
+                    }
                 }
             } catch (Exception e) {
                 appendTerminal("[Error] Failed to parse target update: " + line);
